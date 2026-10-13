@@ -48,7 +48,7 @@ type Outcome struct {
 	Decision Decision `json:"decision"`
 	Reason   string   `json:"reason"`
 	Subject  *Subject `json:"subject"`
-	// Obligations must be carried out together with the decision; if one cannot be, the XACML PEP must not grant access.
+	// Obligations must be carried out together with the decision; if one cannot be, the application must not grant access.
 	Obligations []Obligation `json:"obligations"`
 	// Advice may be ignored without changing the decision.
 	Advice []Advice `json:"advice"`
