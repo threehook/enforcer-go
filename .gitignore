@@ -1,0 +1,43 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+
+# Test binaries and coverage
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency vendoring (remove if you commit vendor/)
+vendor/
+
+# Environment files
+.env
+.env.*
+
+# JetBrains / GoLand
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+cmake-build-*/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~

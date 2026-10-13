@@ -1,0 +1,18 @@
+# enforcer-go
+
+Go library for applications that use [Attesta](https://github.com/threehook/attesta) for authorization. It talks to the Attesta sidecar next to the
+application: start an authorization, hand the wallet link to the user, read the decision.
+
+```go
+c := enforcer.New("http://127.0.0.1:8080")
+req, err := c.Start(ctx, "resource", "policy-id", "CredentialType", []string{"department"}, nil)
+// show req.Link to the user, then poll:
+out, _, err := c.Outcome(ctx, req.RequestID)
+if err == nil && out.Status == "done" && out.Allow {
+	// carry out the action for out.Subject
+}
+```
+
+`Outcome` returns `ErrUnknownRequest` when the sidecar no longer knows the request (expired, or the sidecar restarted).
+
+MIT license.
