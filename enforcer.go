@@ -48,6 +48,30 @@ type Outcome struct {
 	Decision Decision `json:"decision"`
 	Reason   string   `json:"reason"`
 	Subject  *Subject `json:"subject"`
+	// Obligations must be carried out together with the decision; if one cannot be, the XACML PEP must not grant access.
+	Obligations []Obligation `json:"obligations"`
+	// Advice may be ignored without changing the decision.
+	Advice []Advice `json:"advice"`
+}
+
+// AttributeAssignment is a named value that an Obligation or Advice hands to the application.
+type AttributeAssignment struct {
+	AttributeID string `json:"attributeId"`
+	Category    string `json:"category,omitempty"`
+	// DataType is an XACML data type URI; empty means string.
+	DataType string `json:"dataType,omitempty"`
+	Issuer   string `json:"issuer,omitempty"`
+	Value    any    `json:"value"`
+}
+
+type Obligation struct {
+	ID                   string                `json:"id"`
+	AttributeAssignments []AttributeAssignment `json:"attributeAssignments"`
+}
+
+type Advice struct {
+	ID                   string                `json:"id"`
+	AttributeAssignments []AttributeAssignment `json:"attributeAssignments"`
 }
 
 type Client struct {

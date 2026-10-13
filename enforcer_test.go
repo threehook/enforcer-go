@@ -96,3 +96,20 @@ func toStrings(v any) []string {
 	}
 	return out
 }
+
+func TestOutcomeObligationsAndAdvice(t *testing.T) {
+	const answer = `{"status":"done","decision":"Permit","obligations":[{"id":"log-access","attributeAssignments":[{"attributeId":"retention-days","dataType":"http://www.w3.org/2001/XMLSchema#integer","value":30}]}],"advice":[{"id":"notify","attributeAssignments":[{"attributeId":"message","value":"hello"}]}]}`
+	var o Outcome
+	if err := json.Unmarshal([]byte(answer), &o); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.Obligations) != 1 || o.Obligations[0].ID != "log-access" || len(o.Obligations[0].AttributeAssignments) != 1 {
+		t.Fatalf("obligations = %+v", o.Obligations)
+	}
+	if a := o.Obligations[0].AttributeAssignments[0]; a.AttributeID != "retention-days" || a.Value != float64(30) || a.DataType == "" {
+		t.Errorf("obligation attribute = %+v", a)
+	}
+	if len(o.Advice) != 1 || o.Advice[0].ID != "notify" || o.Advice[0].AttributeAssignments[0].Value != "hello" {
+		t.Errorf("advice = %+v", o.Advice)
+	}
+}
