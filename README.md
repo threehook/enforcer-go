@@ -5,7 +5,14 @@ application: start an authorization, hand the wallet link to the user, read the 
 
 ```go
 c := enforcer.New("http://127.0.0.1:8080")
-req, err := c.Start(ctx, "resource", "policy-id", "CredentialType", []string{"department"}, nil)
+req, err := c.Start(ctx, enforcer.Authorization{
+	Resource: "resource",
+	PolicyID: "policy-id",
+	Credentials: []enforcer.Credential{
+		{Type: "Employee", Claims: []string{"department", "roles"}},
+		{Type: "Certificate", Claims: []string{"course"}}, // optional: more credentials of the same person
+	},
+})
 // show req.Link to the user, then poll:
 out, _, err := c.Outcome(ctx, req.RequestID)
 if err == nil && out.Decision == enforcer.DecisionPermit {

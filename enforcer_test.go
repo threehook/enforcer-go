@@ -24,12 +24,16 @@ func TestClientStartsARequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	got, err := New(server.URL).Start(context.Background(), "res", "pol", "Type", []string{"department", "diploma"}, []string{"a", "b"})
+	got, err := New(server.URL).Start(context.Background(), Authorization{
+		Resource: "res", PolicyID: "pol", UserRoles: []string{"a", "b"},
+		Credentials: []Credential{{Type: "Type", Claims: []string{"department", "diploma"}}},
+	})
 	if err != nil || got.RequestID != "abc" || got.Link != "openid4vp://?y=2" {
 		t.Fatalf("start = %+v, %v", got, err)
 	}
-	if gotBody["resource"] != "res" || gotBody["policyId"] != "pol" || gotBody["credentialType"] != "Type" ||
-		strings.Join(toStrings(gotBody["claims"]), ",") != "department,diploma" {
+	credentials, _ := gotBody["credentials"].([]any)
+	if gotBody["resource"] != "res" || gotBody["policyId"] != "pol" || len(credentials) != 1 ||
+		credentials[0].(map[string]any)["credentialType"] != "Type" || strings.Join(toStrings(credentials[0].(map[string]any)["claims"]), ",") != "department,diploma" {
 		t.Errorf("server got body %v", gotBody)
 	}
 	if want := "00-" + got.TraceID + "-"; !strings.HasPrefix(gotTraceparent, want) || len(gotTraceparent) != len(want)+16+3 || len(got.TraceID) != 32 {
@@ -51,13 +55,13 @@ func TestClientStartFailures(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			server := httptest.NewServer(handler)
 			defer server.Close()
-			if _, err := New(server.URL).Start(context.Background(), "r", "p", "t", nil, nil); err == nil {
+			if _, err := New(server.URL).Start(context.Background(), Authorization{Resource: "r", PolicyID: "p", Credentials: []Credential{{Type: "t"}}}); err == nil {
 				t.Error("want an error")
 			}
 		})
 	}
 
-	if _, err := New("http://127.0.0.1:1").Start(context.Background(), "r", "p", "t", nil, nil); err == nil {
+	if _, err := New("http://127.0.0.1:1").Start(context.Background(), Authorization{Resource: "r", PolicyID: "p", Credentials: []Credential{{Type: "t"}}}); err == nil {
 		t.Error("server not running: want an error")
 	}
 }
@@ -111,5 +115,29 @@ func TestOutcomeObligationsAndAdvice(t *testing.T) {
 	}
 	if len(o.Advice) != 1 || o.Advice[0].ID != "notify" || o.Advice[0].AttributeAssignments[0].Value != "hello" {
 		t.Errorf("advice = %+v", o.Advice)
+	}
+}
+
+func TestClientAsksForEveryCredentialInOrder(t *testing.T) {
+	var body struct {
+		Credentials []map[string]any `json:"credentials"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		_, _ = w.Write([]byte(`{"requestId":"abc","authorizationRequest":"openid4vp://?y=2"}`))
+	}))
+	defer server.Close()
+
+	_, err := New(server.URL).Start(context.Background(), Authorization{
+		Resource: "res", PolicyID: "pol",
+		Credentials: []Credential{{Type: "Employee", Claims: []string{"department"}}, {Type: "Certificate", Claims: []string{"course"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(body.Credentials) != 2 || body.Credentials[0]["credentialType"] != "Employee" || body.Credentials[1]["credentialType"] != "Certificate" ||
+		strings.Join(toStrings(body.Credentials[1]["claims"]), ",") != "course" {
+		t.Errorf("server got %v", body.Credentials)
 	}
 }

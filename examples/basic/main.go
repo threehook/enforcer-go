@@ -27,7 +27,12 @@ func main() {
 	defer stop()
 
 	c := enforcer.New(*base)
-	req, err := c.Start(ctx, *resource, *policy, *credType, split(*claims), split(*roles))
+	req, err := c.Start(ctx, enforcer.Authorization{
+		Resource:    *resource,
+		PolicyID:    *policy,
+		Credentials: []enforcer.Credential{{Type: *credType, Claims: split(*claims)}},
+		UserRoles:   split(*roles),
+	})
 	if err != nil {
 		log.Fatalf("start: %v", err)
 	}

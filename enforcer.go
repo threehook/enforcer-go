@@ -83,9 +83,25 @@ func New(base string) *Client {
 	return &Client{base: base, http: &http.Client{Timeout: 10 * time.Second}}
 }
 
-// Start sends userRoles as the caller's own claim about the person.
-func (c *Client) Start(ctx context.Context, resource, policyID, credentialType string, claims, userRoles []string) (Request, error) {
-	body, err := json.Marshal(map[string]any{"resource": resource, "policyId": policyID, "credentialType": credentialType, "claims": claims})
+// Credential is a credential the person is asked to present.
+type Credential struct {
+	Type   string   `json:"credentialType"`
+	Claims []string `json:"claims"`
+}
+
+// Authorization is what an application asks Attesta to decide.
+type Authorization struct {
+	Resource string
+	PolicyID string
+	// Credentials are what the person must present, each of a type of its own. The first identifies the person and the others must be of the same person.
+	Credentials []Credential
+	// UserRoles are the application's own claim about the person.
+	UserRoles []string
+}
+
+// Start asks Attesta to decide on the authorization. The policy has to be one that accepts as many credentials as are asked for.
+func (c *Client) Start(ctx context.Context, a Authorization) (Request, error) {
+	body, err := json.Marshal(map[string]any{"resource": a.Resource, "policyId": a.PolicyID, "credentials": a.Credentials})
 	if err != nil {
 		return Request{}, err
 	}
@@ -96,8 +112,8 @@ func (c *Client) Start(ctx context.Context, resource, policyID, credentialType s
 	req.Header.Set("Content-Type", "application/json")
 	traceID, spanID := randomHex(16), randomHex(8)
 	req.Header.Set("traceparent", "00-"+traceID+"-"+spanID+"-01")
-	if len(userRoles) > 0 {
-		req.Header.Set("Att-User-Roles", strings.Join(userRoles, ","))
+	if len(a.UserRoles) > 0 {
+		req.Header.Set("Att-User-Roles", strings.Join(a.UserRoles, ","))
 	}
 	raw, status, err := c.do(req)
 	if err != nil {
